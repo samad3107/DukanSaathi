@@ -512,16 +512,19 @@ def send_sms_udhaar_reminder_view(request):
             customer_name=customer.name,
             pending_amount=float(pending_amount),
         )
-        if sms_result["success"] and call_result["success"]:
-            return JsonResponse({
-                "message": f"Paytm SMS sent and voice call started for {customer.name}!",
-                "sms_sid": sms_result["sid"],
-                "call_sid": call_result["sid"],
-            })
-        return JsonResponse({
-            "error": "SMS: " + ("sent" if sms_result["success"] else sms_result["error"])
-            + "; Call: " + ("started" if call_result["success"] else call_result["error"]),
-        }, status=502)
+        sms_status = "sent" if sms_result["success"] else f"failed: {sms_result['error']}"
+        call_status = "started" if call_result["success"] else f"failed: {call_result['error']}"
+        message = f"SMS {sms_status}; voice call {call_status}."
+        response = {
+            "message": message,
+            "sms_sent": sms_result["success"],
+            "call_started": call_result["success"],
+        }
+        if sms_result["success"]:
+            response["sms_sid"] = sms_result["sid"]
+        if call_result["success"]:
+            response["call_sid"] = call_result["sid"]
+        return JsonResponse(response, status=200 if sms_result["success"] or call_result["success"] else 502)
     except Customer.DoesNotExist:
         return JsonResponse({"error": "Customer not found"}, status=404)
     except Exception as e:
