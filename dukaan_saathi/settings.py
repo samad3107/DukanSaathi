@@ -30,18 +30,11 @@ SECRET_KEY = 'django-insecure-u@6%qy2jvt914tpf!jea&a_z(lpn@$ki9fe*%_3he2qzjd(3_9
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["127.0.0.1", "localhost", "testserver", "dukan-saathi.vercel.app"]
+ALLOWED_HOSTS = ["127.0.0.1", "localhost", "testserver"]
 public_host = urlparse(os.getenv("PUBLIC_BASE_URL", "")).hostname
 if public_host:
     ALLOWED_HOSTS.append(public_host)
-vercel_host = os.getenv("VERCEL_URL", "").split(":", 1)[0].strip()
-if vercel_host and vercel_host not in ALLOWED_HOSTS:
-    ALLOWED_HOSTS.append(vercel_host)
 ALLOWED_HOSTS.append(".ngrok-free.dev")
-
-CSRF_TRUSTED_ORIGINS = ["https://dukan-saathi.vercel.app"]
-if os.getenv("PUBLIC_BASE_URL"):
-    CSRF_TRUSTED_ORIGINS.append(os.getenv("PUBLIC_BASE_URL").rstrip("/"))
 
 
 # Application definition
@@ -94,11 +87,10 @@ WSGI_APPLICATION = 'dukaan_saathi.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
-IS_VERCEL = bool(os.getenv("VERCEL") or os.getenv("VERCEL_ENV") or os.path.exists("/var/task"))
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': Path('/tmp/db.sqlite3') if IS_VERCEL else BASE_DIR / 'db.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
 

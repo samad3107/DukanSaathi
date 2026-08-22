@@ -14,7 +14,3 @@ from django.core.wsgi import get_wsgi_application
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'dukaan_saathi.settings')
 
 application = get_wsgi_application()
-
-from .startup import prepare_vercel_database
-
-prepare_vercel_database()

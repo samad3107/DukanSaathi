@@ -14,7 +14,3 @@ from django.core.asgi import get_asgi_application
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'dukaan_saathi.settings')
 
 application = get_asgi_application()
-
-from .startup import prepare_vercel_database
-
-prepare_vercel_database()
