@@ -1,0 +1,19 @@
+{
+  "name": "DukaanSaathi Shop OS",
+  "short_name": "DukaanSaathi",
+  "description": "Inventory, sales, customers, and payment tools for your shop.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#f5f6f1",
+  "theme_color": "#087f78",
+  "icons": [
+    {
+      "src": "/static/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

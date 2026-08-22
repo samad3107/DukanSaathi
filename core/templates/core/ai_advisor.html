@@ -1,0 +1,172 @@
+{% extends 'base.html' %}
+
+{% block title %}AI Restock Advisor - DukaanSaathi{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+            <div class="flex items-center gap-2">
+                <p class="eyebrow">Decision support</p>
+                <h1 class="page-title">Predictive restock advisor</h1>
+            </div>
+            <p class="page-subtitle">Use recent sales velocity to decide what to reorder before the shelf goes quiet.</p>
+        </div>
+        
+        <div class="stats shadow bg-base-100 border border-base-300">
+            <div class="stat py-2 px-4">
+                <div class="stat-title text-xs">Prediction model</div>
+                <div class="stat-value text-sm text-primary">{{ model_name }}</div>
+                <div class="stat-desc">Trained on {{ training_window }} of sales</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div class="stat rounded-box"><div class="stat-title">Products scanned</div><div class="stat-value text-2xl">{{ forecast_summary.products }}</div><div class="stat-desc">Current catalog</div></div>
+        <div class="stat rounded-box"><div class="stat-title">Needs reorder</div><div class="stat-value text-2xl text-primary">{{ forecast_summary.reorder_count }}</div><div class="stat-desc">Based on demand</div></div>
+        <div class="stat rounded-box"><div class="stat-title">Critical stock</div><div class="stat-value text-2xl text-error">{{ forecast_summary.critical_count }}</div><div class="stat-desc">Immediate attention</div></div>
+        <div class="stat rounded-box"><div class="stat-title">Avg. confidence</div><div class="stat-value text-2xl text-secondary">{{ forecast_summary.average_confidence }}%</div><div class="stat-desc">Back-tested signal</div></div>
+    </div>
+
+    <div class="card bg-base-100 shadow-xl">
+        <div class="card-body">
+            <div class="flex flex-col md:flex-row md:items-end justify-between gap-2 mb-3">
+                <div>
+                    <p class="eyebrow">Demand signal</p>
+                    <h2 class="card-title text-xl">What the model sees next</h2>
+                </div>
+                <div class="flex flex-wrap gap-3 items-center text-xs font-semibold text-base-content/60">
+                    <select id="forecast_product_select" class="select select-bordered select-xs w-48"></select>
+                    <span><i class="inline-block h-2 w-5 rounded bg-[#087f78]"></i> Actual sales</span>
+                    <span><i class="inline-block h-2 w-5 rounded bg-[#e66d51]"></i> 7-day forecast</span>
+                </div>
+            </div>
+            <div class="relative h-72 w-full"><canvas id="forecast_chart"></canvas></div>
+        </div>
+    </div>
+
+    <!-- Prediction Table -->
+    <div class="card bg-base-100 shadow-xl">
+        <div class="card-body">
+            <p class="eyebrow">Model output</p>
+            <h2 class="card-title text-xl mb-2">Automated inventory recommendations</h2>
+            <p class="text-xs text-base-content/60 mb-4">Calculated from historical order volume and projected daily burn rate.</p>
+            
+            <div class="overflow-x-auto table-wrap">
+                <table class="table table-zebra w-full">
+                    <thead>
+                        <tr>
+                            <th>Product Name</th>
+                            <th>Current Stock</th>
+                            <th>Daily Sales Rate</th>
+                            <th>Est. Days Left</th>
+                            <th>Suggested Reorder</th>
+                            <th>Reorder Point</th>
+                            <th>Confidence</th>
+                            <th>Trend</th>
+                            <th>Stockout Risk</th>
+                            <th>Model signal</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in predictions %}
+                        <tr>
+                            <td class="font-bold">{{ item.name }}</td>
+                            <td class="font-semibold">{{ item.current_stock }} units</td>
+                            <td class="text-sm">{{ item.daily_velocity }} / day</td>
+                            <td class="font-medium">
+                                {% if item.days_left == 'No recent sales' %}
+                                    <span class="text-base-content/50">Stagnant</span>
+                                {% else %}
+                                    {{ item.days_left }} days
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if item.suggested_reorder > 0 %}
+                                    <span class="font-bold text-primary">+{{ item.suggested_reorder }} units</span>
+                                {% else %}
+                                    <span class="text-xs text-success">Sufficient Stock</span>
+                                {% endif %}
+                            </td>
+                            <td class="font-semibold">{{ item.reorder_point }} units</td>
+                            <td><progress class="progress progress-primary w-20" value="{{ item.confidence }}" max="100"></progress><span class="text-xs ml-1">{{ item.confidence }}%</span></td>
+                            <td class="capitalize {% if item.trend == 'rising' %}text-error{% elif item.trend == 'falling' %}text-success{% endif %}">{{ item.trend }}</td>
+                            <td>
+                                {% if item.risk == 'CRITICAL' %}
+                                    <span class="badge badge-error text-white font-bold">CRITICAL</span>
+                                {% elif item.risk == 'HIGH' %}
+                                    <span class="badge badge-warning text-white font-bold">HIGH RISK</span>
+                                {% elif item.risk == 'MEDIUM' %}
+                                    <span class="badge badge-info text-white font-bold">MEDIUM</span>
+                                {% else %}
+                                    <span class="badge badge-success text-white font-bold">LOW</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-xs text-base-content/60">{{ item.model_used }}{% if item.training_days %}<br>{{ item.training_days }} active sales days{% endif %}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="10" class="text-center py-6 text-base-content/60">No inventory predictions available. Add products to get started.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    const forecastData = JSON.parse('{{ chart_data|escapejs }}');
+    const chartColors = ['#087f78', '#e66d51', '#315c72', '#d49a3a', '#7b5e8e', '#3d8b5f'];
+    const productSelect = document.getElementById('forecast_product_select');
+    let forecastChart;
+    function drawForecast(productIndex) {
+        const product = forecastData.products[productIndex];
+        if (forecastChart) forecastChart.destroy();
+        forecastChart = new Chart(document.getElementById('forecast_chart'), {
+            type: 'line',
+            data: {
+                labels: forecastData.labels,
+                datasets: [{
+                    label: `${product.name} actual`,
+                    data: product.actual,
+                    borderColor: '#087f78',
+                    backgroundColor: '#087f78',
+                    borderWidth: 2,
+                    tension: .35,
+                    pointRadius: 1,
+                }, {
+                    label: `${product.name} forecast`,
+                    data: product.forecast,
+                    borderColor: '#e66d51',
+                    borderDash: [6, 5],
+                    borderWidth: 2,
+                    tension: .35,
+                    pointRadius: 0,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8 } } },
+                scales: {
+                    x: { grid: { display: false }, ticks: { maxTicksLimit: 8, color: '#687873' } },
+                    y: { beginAtZero: true, grid: { color: '#edf1ed' }, ticks: { precision: 0, color: '#687873' } }
+                }
+            }
+        });
+    }
+    if (forecastData.products.length) {
+        forecastData.products.forEach((product, index) => productSelect.add(new Option(product.name, index)));
+        productSelect.addEventListener('change', event => drawForecast(event.target.value));
+        drawForecast(0);
+    }
+</script>
+{% endblock %}

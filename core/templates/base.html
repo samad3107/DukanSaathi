@@ -1,0 +1,460 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <!-- html5-qrcode for WebRTC Camera Barcode Scanning -->
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js">
+
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#087f78">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="DukaanSaathi">
+    <link rel="manifest" href="{% static 'manifest.json' %}">
+    <link rel="icon" href="{% static 'icon.svg' %}" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="{% static 'icon.svg' %}">
+    <title>{% block title %}DukaanSaathi{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.min.css" rel="stylesheet" type="text/css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+    {% block extra_head %}{% endblock %}
+    <style>
+        :root {
+            --ink: #172321;
+            --muted: #687873;
+            --teal: #087f78;
+            --teal-dark: #05635f;
+            --coral: #e66d51;
+            --paper: #f5f6f1;
+            --line: #dce4dd;
+            --shadow: 0 14px 35px rgba(23, 35, 33, .07);
+        }
+
+        html { background: var(--paper); }
+        body {
+            background: radial-gradient(circle at 90% 0%, rgba(230, 109, 81, .12), transparent 26rem),
+                        linear-gradient(135deg, #f8faf6 0%, var(--paper) 55%, #eef5ef 100%);
+            color: var(--ink);
+            font-family: 'DM Sans', sans-serif;
+        }
+        h1, h2, h3, .brand-mark { font-family: 'Space Grotesk', sans-serif; letter-spacing: 0; }
+        .app-nav {
+            background: rgba(255, 255, 255, .86);
+            border-bottom: 1px solid var(--line);
+            backdrop-filter: blur(14px);
+        }
+        .brand-mark { color: var(--ink); font-size: 1.15rem; font-weight: 700; line-height: 1.05; }
+        .brand-mark span { color: var(--teal); }
+        .nav-link { color: var(--muted); font-weight: 600; transition: .2s ease; }
+        .nav-link:hover, .nav-link.is-active { color: var(--teal); background: #e6f3ee; }
+        .page-shell { max-width: 1280px; }
+        .eyebrow { color: var(--teal); font-size: .72rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+        .page-title { color: var(--ink); font-size: clamp(1.8rem, 3vw, 2.65rem); font-weight: 700; line-height: 1.05; }
+        .page-subtitle { color: var(--muted); font-size: .95rem; margin-top: .45rem; }
+        .surface, .card, .stats { background: rgba(255,255,255,.9) !important; border: 1px solid var(--line); box-shadow: var(--shadow); }
+        .card, .rounded-box { border-radius: 12px !important; }
+        .card-body { padding: clamp(1rem, 2.4vw, 1.7rem); }
+        .stat { padding: 1.25rem; }
+        .stat-title, .table th { color: var(--muted); font-weight: 700; }
+        .stat-value { color: var(--ink); font-family: 'Space Grotesk', sans-serif; }
+        .table :where(th, td) { border-color: #edf1ed; padding: .9rem .75rem; }
+        .table thead { background: #f3f7f3; }
+        .table thead th { font-size: .7rem; letter-spacing: .06em; text-transform: uppercase; }
+        .table-zebra tbody tr:nth-child(even) { background: #fafcf9; }
+        .btn { border-radius: 8px; font-weight: 700; text-transform: none; }
+        .btn-primary { background: var(--teal); border-color: var(--teal); }
+        .btn-primary:hover { background: var(--teal-dark); border-color: var(--teal-dark); }
+        .btn-secondary { background: var(--coral); border-color: var(--coral); }
+        .btn-secondary:hover { background: #c9573e; border-color: #c9573e; }
+        .input, .select, .file-input { border-color: var(--line); background: #fff; }
+        .input:focus, .select:focus { outline: 2px solid rgba(8, 127, 120, .2); border-color: var(--teal); }
+        .modal-box { border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 24px 80px rgba(23, 35, 33, .18); }
+
+        @media (max-width: 760px) {
+            .app-nav { padding: .55rem .8rem; }
+            .nav-links { display: grid; grid-template-columns: repeat(2, 1fr); width: 100%; gap: .25rem; padding-top: .5rem; }
+            .nav-link { justify-content: center; }
+            .page-shell { padding: 1rem .85rem 5rem; }
+            .table { min-width: 680px; }
+            .table-wrap { overflow-x: auto; }
+            body { padding-bottom: env(safe-area-inset-bottom); }
+            .app-nav { padding-top: max(.55rem, env(safe-area-inset-top)); }
+        }
+    </style>
+</head>
+<body class="min-h-screen relative pb-16">
+    <!-- Navbar -->
+    <div class="navbar app-nav sticky top-0 z-40 mb-6 px-4 md:px-8">
+        <div class="flex-1">
+            <a href="{% url 'dashboard' %}" class="btn btn-ghost px-1 hover:bg-transparent">
+                <span class="brand-mark">dukaan<span>saathi</span><small class="block font-sans text-[.58rem] font-medium tracking-widest text-base-content/50">SHOP OS</small></span>
+            </a>
+        </div>
+        <div class="flex-none gap-1 md:gap-2 flex-wrap justify-end">
+            <div class="nav-links flex gap-1">
+                <a href="{% url 'dashboard' %}" class="btn btn-ghost btn-sm nav-link {% if request.resolver_match.url_name == 'dashboard' %}is-active{% endif %}" data-i18n="nav_dashboard">Dashboard</a>
+                <a href="{% url 'inventory_list' %}" class="btn btn-ghost btn-sm nav-link {% if request.resolver_match.url_name == 'inventory_list' %}is-active{% endif %}" data-i18n="nav_inventory">Inventory</a>
+                <a href="{% url 'sales_list' %}" class="btn btn-ghost btn-sm nav-link {% if request.resolver_match.url_name == 'sales_list' %}is-active{% endif %}" data-i18n="nav_sales">Sales History</a>
+                <a href="{% url 'ai_advisor' %}" class="btn btn-ghost btn-sm nav-link {% if request.resolver_match.url_name == 'ai_advisor' %}is-active{% endif %}" data-i18n="nav_ai">AI Advisor</a>
+            </div>
+            
+            <!-- Vision AI Invoice OCR Scan Button -->
+            <button onclick="invoice_modal.showModal()" class="btn btn-sm btn-secondary text-white font-bold gap-1">
+                📷 <span data-i18n="nav_ocr">Scan Invoice</span>
+            </button>
+
+            <a href="/admin/" class="btn btn-outline btn-sm" data-i18n="nav_admin">Admin Portal</a>
+            
+            <!-- Language Toggle Button -->
+            <button onclick="toggleLanguage()" class="btn btn-outline btn-sm ml-1" id="lang_toggle_btn">
+                हिन्दी
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Body Container -->
+    <div class="container mx-auto p-4 page-shell">
+        {% if messages %}
+            <div class="mb-4 space-y-2">
+                {% for message in messages %}
+                    <div class="alert {% if message.tags == 'error' %}alert-error{% else %}alert-success{% endif %} text-white shadow-lg">
+                        <span>{{ message }}</span>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        {% block content %}
+        {% endblock %}
+    </div>
+
+    <!-- Floating "Ask DukaanSaathi AI" Chat Widget -->
+    <div class="fixed bottom-6 right-6 z-50">
+        <button onclick="ai_chat_modal.showModal()" class="btn btn-circle btn-primary btn-lg shadow-2xl flex items-center justify-center animate-bounce">
+            <span class="text-xl">🤖</span>
+        </button>
+    </div>
+
+    <!-- Modal 1: AI Natural Language Chat Assistant -->
+    <dialog id="ai_chat_modal" class="modal">
+        <div class="modal-box max-w-lg">
+            <div class="flex items-center justify-between border-b pb-3 mb-4">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white font-bold">✨</div>
+                    <div>
+                        <h3 class="font-bold text-lg" data-i18n="ai_title">Ask DukaanSaathi AI</h3>
+                        <p class="text-xs text-base-content/60" data-i18n="ai_subtitle">Ask questions via Voice or Text in English/Hindi</p>
+                    </div>
+                </div>
+                <button onclick="ai_chat_modal.close()" class="btn btn-sm btn-circle btn-ghost">✕</button>
+            </div>
+
+            <div id="chat_history" class="h-64 overflow-y-auto space-y-3 p-3 bg-base-200 rounded-lg mb-4 text-sm">
+                <div class="chat chat-start">
+                    <div class="chat-bubble chat-bubble-primary text-xs" id="chat_welcome">
+                        Namaste! I am your AI assistant. Try asking me:
+                        <br>• "Which products are running low?"
+                        <br>• "What is my total revenue?"
+                        <br>• "Show me the top selling product"
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex gap-2 items-center">
+                <button type="button" onclick="startVoiceRecognition()" class="btn btn-circle btn-outline btn-secondary" title="Click to speak">
+                    🎤
+                </button>
+                <input id="ai_input_field" type="text" placeholder="Type or click 🎤 to speak..." class="input input-bordered w-full" onkeypress="handleKeyPress(event)" />
+                <button onclick="sendAIQuery()" class="btn btn-primary text-white" data-i18n="ai_send">Ask</button>
+            </div>
+        </div>
+    </dialog>
+
+    <!-- Modal 2: Gemini Vision AI Invoice Scanner -->
+    <dialog id="invoice_modal" class="modal">
+        <div class="modal-box max-w-3xl">
+            <div class="flex justify-between items-center border-b pb-3 mb-4">
+                <h3 class="font-bold text-lg text-secondary flex items-center gap-2">
+                    ✨ Gemini Vision OCR Invoice Parser
+                </h3>
+                <button onclick="invoice_modal.close()" class="btn btn-sm btn-circle btn-ghost">✕</button>
+            </div>
+
+            <p class="text-xs text-base-content/70 mb-4">
+                Upload a photo of a physical bill, distributor invoice, or hand-written paper khata receipt. DukaanSaathi AI will extract items, prices, and stock quantities automatically.
+            </p>
+
+            <div class="form-control w-full mb-4">
+                <input type="file" id="invoice_file_input" accept="image/*" class="file-input file-input-bordered file-input-secondary w-full" />
+            </div>
+
+            <button onclick="uploadAndParseInvoice()" id="parse_btn" class="btn btn-secondary w-full text-white font-bold">
+                Analyze Bill with Gemini Vision 2.5
+            </button>
+
+            <!-- Spinner State -->
+            <div id="ocr_spinner" class="hidden my-6 text-center">
+                <span class="loading loading-spinner loading-lg text-secondary"></span>
+                <p class="text-sm mt-2 font-semibold animate-pulse">Extracting line items, prices, and quantities...</p>
+            </div>
+
+            <!-- Parsed Results Table -->
+            <div id="ocr_results_container" class="hidden mt-6">
+                <div class="flex justify-between items-center mb-2">
+                    <h4 class="font-bold text-sm">Extracted Inventory Items</h4>
+                    <span id="supplier_badge" class="badge badge-accent font-semibold"></span>
+                </div>
+
+                <div class="overflow-x-auto max-h-60 bg-base-200 rounded-lg p-2 mb-4">
+                    <table class="table table-xs w-full">
+                        <thead>
+                            <tr>
+                                <th>Item Name</th>
+                                <th>Category</th>
+                                <th>Qty</th>
+                                <th>Cost (₹)</th>
+                                <th>Sell (₹)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ocr_items_tbody"></tbody>
+                    </table>
+                </div>
+
+                <button onclick="saveParsedItems()" id="save_parsed_btn" class="btn btn-success w-full text-white font-bold">
+                    Confirm & Auto-Ingest into Database
+                </button>
+            </div>
+        </div>
+    </dialog>
+
+    <script>
+    // 1. Localization Dictionary
+    const translations = {
+        en: {
+            nav_dashboard: "Dashboard",
+            nav_inventory: "Inventory",
+            nav_sales: "Sales History",
+            nav_ai: "✨ AI Restock Advisor",
+            nav_ocr: "Scan Invoice",
+            nav_admin: "Admin Portal",
+            ai_title: "Ask DukaanSaathi AI",
+            ai_subtitle: "Ask questions via Voice or Text in English/Hindi",
+            ai_send: "Ask",
+            lang_btn: "🇮🇳 हिन्दी"
+        },
+        hi: {
+            nav_dashboard: "डैशबोर्ड",
+            nav_inventory: "सामान सूची (इन्वेंट्री)",
+            nav_sales: "बिक्री इतिहास",
+            nav_ai: "✨ एआई रीस्टॉक सलाहकार",
+            nav_ocr: "बिल स्कैन करें",
+            nav_admin: "एडमिन पोर्टल",
+            ai_title: "दुकानसाथी एआई से पूछें",
+            ai_subtitle: "आवाज या टेक्स्ट के जरिए हिंदी या अंग्रेजी में सवाल पूछें",
+            ai_send: "पूछें",
+            lang_btn: "🇬🇧 English"
+        }
+    };
+
+    let currentLang = localStorage.getItem('dukaan_lang') || 'en';
+
+    function applyLanguage(lang) {
+        document.querySelectorAll('[data-i18n]').forEach(el => {
+            const key = el.getAttribute('data-i18n');
+            if (translations[lang] && translations[lang][key]) {
+                el.innerText = translations[lang][key];
+            }
+        });
+        document.getElementById('lang_toggle_btn').innerText = translations[lang].lang_btn;
+        localStorage.setItem('dukaan_lang', lang);
+    }
+
+    function toggleLanguage() {
+        currentLang = currentLang === 'en' ? 'hi' : 'en';
+        applyLanguage(currentLang);
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        applyLanguage(currentLang);
+    });
+
+    // 2. Web Speech API Voice Input
+    function startVoiceRecognition() {
+        if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+            alert('Voice input is not supported in this browser. Please try Google Chrome.');
+            return;
+        }
+
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const recognition = new SpeechRecognition();
+        
+        recognition.lang = currentLang === 'hi' ? 'hi-IN' : 'en-US';
+        recognition.interimResults = false;
+
+        const inputField = document.getElementById('ai_input_field');
+        inputField.placeholder = "Listening... Speak now";
+
+        recognition.start();
+
+        recognition.onresult = function(event) {
+            const transcript = event.results[0][0].transcript;
+            inputField.value = transcript;
+            inputField.placeholder = "Type or click 🎤 to speak...";
+            sendAIQuery();
+        };
+
+        recognition.onerror = function() {
+            inputField.placeholder = "Voice error. Try typing your query.";
+        };
+    }
+
+    function handleKeyPress(e) {
+        if (e.key === 'Enter') sendAIQuery();
+    }
+
+    // 3. Natural Language AI Assistant Chat
+    function sendAIQuery() {
+        const input = document.getElementById('ai_input_field');
+        const query = input.value.trim();
+        if (!query) return;
+
+        const chatHistory = document.getElementById('chat_history');
+
+        chatHistory.innerHTML += `
+            <div class="chat chat-end">
+                <div class="chat-bubble bg-base-300 text-base-content">${query}</div>
+            </div>
+        `;
+        input.value = '';
+        chatHistory.scrollTop = chatHistory.scrollHeight;
+
+        fetch('/api/ai-chat/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({ query: query })
+        })
+        .then(async res => {
+            const data = await res.json();
+            if (!res.ok || data.error) throw new Error(data.error || 'Assistant request failed.');
+            return data;
+        })
+        .then(data => {
+            chatHistory.innerHTML += `
+                <div class="chat chat-start">
+                    <div class="chat-bubble chat-bubble-primary text-xs">${data.answer || 'No answer returned.'}</div>
+                </div>
+            `;
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+        })
+        .catch(err => {
+            chatHistory.innerHTML += `
+                <div class="chat chat-start">
+                    <div class="chat-bubble chat-bubble-error text-xs">${err.message}</div>
+                </div>
+            `;
+        });
+    }
+
+    // 4. Gemini Vision OCR Scanner Engine
+    let lastParsedData = null;
+
+    function uploadAndParseInvoice() {
+        const fileInput = document.getElementById('invoice_file_input');
+        if (!fileInput.files || fileInput.files.length === 0) {
+            alert("Please select an invoice image file first.");
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('invoice_image', fileInput.files[0]);
+
+        document.getElementById('parse_btn').classList.add('hidden');
+        document.getElementById('ocr_spinner').classList.remove('hidden');
+        document.getElementById('ocr_results_container').classList.add('hidden');
+
+        fetch('/api/parse-invoice/', {
+            method: 'POST',
+            body: formData
+        })
+        .then(res => res.json())
+        .then(res => {
+            document.getElementById('ocr_spinner').classList.add('hidden');
+            document.getElementById('parse_btn').classList.remove('hidden');
+
+            if (res.status === 'success') {
+                lastParsedData = res.data;
+                renderParsedResults(res.data);
+            } else {
+                alert("Error: " + (res.error || "Could not parse image."));
+            }
+        })
+        .catch(err => {
+            document.getElementById('ocr_spinner').classList.add('hidden');
+            document.getElementById('parse_btn').classList.remove('hidden');
+            alert("Failed to reach server.");
+        });
+    }
+
+    function renderParsedResults(data) {
+        const tbody = document.getElementById('ocr_items_tbody');
+        tbody.innerHTML = '';
+
+        document.getElementById('supplier_badge').innerText = `Supplier: ${data.supplier_name || 'Unknown'}`;
+
+        data.items.forEach(item => {
+            tbody.innerHTML += `
+                <tr>
+                    <td class="font-bold">${item.product_name}</td>
+                    <td><span class="badge badge-ghost badge-sm">${item.category}</span></td>
+                    <td>${item.quantity}</td>
+                    <td>₹${item.cost_price}</td>
+                    <td>₹${item.selling_price}</td>
+                </tr>
+            `;
+        });
+
+        document.getElementById('ocr_results_container').classList.remove('hidden');
+    }
+
+    function saveParsedItems() {
+        if (!lastParsedData || !lastParsedData.items) return;
+
+        const btn = document.getElementById('save_parsed_btn');
+        btn.disabled = true;
+        btn.innerText = "Ingesting into database...";
+
+        fetch('/api/bulk-add-inventory/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ items: lastParsedData.items })
+        })
+        .then(res => res.json())
+        .then(res => {
+            if (res.status === 'success') {
+                alert(res.message);
+                window.location.reload();
+            } else {
+                alert("Error: " + res.error);
+                btn.disabled = false;
+                btn.innerText = "Confirm & Auto-Ingest into Database";
+            }
+        });
+    }
+    </script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('{% static "service-worker.js" %}');
+            });
+        }
+    </script>
+</body>
+</html>

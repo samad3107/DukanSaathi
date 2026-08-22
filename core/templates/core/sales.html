@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+
+{% block title %}Sales History - DukaanSaathi{% endblock %}
+
+{% block content %}
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div>
+        <p class="eyebrow">Cash register</p>
+        <h1 class="page-title">Sales history</h1>
+        <p class="page-subtitle">Every transaction, ready to review or export.</p>
+    </div>
+    
+    <div class="flex flex-wrap items-center gap-2">
+        <a href="{% url 'export_sales_csv' %}" class="btn btn-outline btn-success btn-sm">Export CSV</a>
+        
+        <!-- Filter by Customer -->
+        <form method="GET" class="flex gap-2">
+            <select name="customer" class="select select-bordered select-sm w-full md:w-56" onchange="this.form.submit()">
+                <option value="">All Customers</option>
+                {% for cust in customers %}
+                    <option value="{{ cust.id }}" {% if selected_customer == cust.id|stringformat:"s" %}selected{% endif %}>
+                        {{ cust.name }} ({{ cust.phone }})
+                    </option>
+                {% endfor %}
+            </select>
+            {% if selected_customer %}
+                <a href="{% url 'sales_list' %}" class="btn btn-ghost btn-sm">Reset</a>
+            {% endif %}
+        </form>
+    </div>
+</div>
+
+    <!-- Sales Table -->
+    <div class="card bg-base-100 shadow-xl">
+        <div class="card-body">
+            <div class="flex items-center justify-between mb-3">
+                <h2 class="card-title text-xl">Transaction ledger</h2>
+                <span class="badge badge-ghost">Filtered view</span>
+            </div>
+            <div class="overflow-x-auto table-wrap">
+                <table class="table table-zebra w-full">
+                    <thead>
+                        <tr>
+                            <th>Sale ID</th>
+                            <th>Item Name</th>
+                            <th>Customer Name</th>
+                            <th>Quantity</th>
+                            <th>Total Amount</th>
+                            <th>Transaction Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for sale in sales %}
+                        <tr>
+                            <td class="font-bold">#{{ sale.id }}</td>
+                            <td class="font-medium text-primary">{{ sale.product.name }}</td>
+                            <td>{{ sale.customer.name|default:"Walk-in Customer" }}</td>
+                            <td class="font-semibold">{{ sale.quantity }}</td>
+                            <td class="font-bold text-success">₹{{ sale.total_amount }}</td>
+                            <td class="text-xs text-base-content/70">{{ sale.sale_date|date:"d M Y, H:i A" }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center py-6 text-base-content/60">No sales records found.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

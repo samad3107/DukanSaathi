@@ -1,0 +1,599 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - DukaanSaathi{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header with Quick Action Buttons -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+            <p class="eyebrow">Saturday, 22 August 2026</p>
+            <h1 class="page-title">Good morning, keep the counter moving.</h1>
+            <p class="page-subtitle">A clear view of today’s stock, customers, and cash flow.</p>
+        </div>
+        <div class="flex flex-wrap gap-2">
+            <!-- WebRTC Barcode Scanner Trigger Button -->
+            <button onclick="openBarcodeScannerModal()" class="btn btn-warning text-slate-900 font-bold shadow-lg gap-2">
+                Scan barcode
+            </button>
+            <button onclick="openPaytmCheckout()" class="btn btn-primary text-white shadow-lg bg-[#002E6E] border-[#002E6E] hover:bg-[#001D47]">
+                <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14h-2v-2h2v2zm0-4h-2V7h2v5z"/></svg>
+                Pay with Paytm
+            </button>
+            <button onclick="product_modal.showModal()" class="btn btn-secondary text-white">Add product</button>
+            <button onclick="customer_modal.showModal()" class="btn btn-accent text-white">Add customer</button>
+            <a href="/admin/" class="btn btn-outline">Admin Portal</a>
+        </div>
+    </div>
+
+    <!-- Stat Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="stat bg-base-100 shadow rounded-box border-l-4 border-[#087f78]">
+            <div class="stat-title text-base-content/70">Total Revenue</div>
+            <div class="stat-value text-primary">₹{{ total_revenue|floatformat:2 }}</div>
+            <div class="stat-desc">Lifetime earnings</div>
+        </div>
+        <div class="stat bg-base-100 shadow rounded-box">
+            <div class="stat-title text-base-content/70">Total Sales</div>
+            <div class="stat-value text-secondary">{{ total_sales_count }}</div>
+            <div class="stat-desc">Completed orders</div>
+        </div>
+        <div class="stat bg-base-100 shadow rounded-box">
+            <div class="stat-title text-base-content/70">Total Products</div>
+            <div class="stat-value text-accent">{{ total_products }}</div>
+            <div class="stat-desc">In catalog</div>
+        </div>
+        <div class="stat bg-base-100 shadow rounded-box">
+            <div class="stat-title text-base-content/70">Customers</div>
+            <div class="stat-value">{{ total_customers }}</div>
+            <div class="stat-desc">Registered</div>
+        </div>
+    </div>
+
+    <!-- Main Content Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-2 card bg-base-100 shadow-xl">
+            <div class="card-body">
+                <div class="flex items-end justify-between mb-3">
+                    <div><p class="eyebrow">Cash register</p><h2 class="card-title text-xl">Recent sales</h2></div>
+                    <a href="{% url 'sales_list' %}" class="link link-primary text-sm font-bold">View all</a>
+                </div>
+                <div class="overflow-x-auto table-wrap">
+                    <table class="table table-zebra w-full">
+                        <thead><tr><th>#</th><th>Product</th><th>Customer</th><th>Qty</th><th>Amount</th><th>Date</th></tr></thead>
+                        <tbody>
+                            {% for sale in recent_sales %}
+                            <tr><td>{{ sale.id }}</td><td class="font-medium">{{ sale.product.name }}</td><td>{{ sale.customer.name|default:"Walk-in Customer" }}</td><td>{{ sale.quantity }}</td><td class="font-semibold text-success">₹{{ sale.total_amount }}</td><td class="text-xs">{{ sale.sale_date|date:"d M Y, H:i" }}</td></tr>
+                            {% empty %}<tr><td colspan="6" class="text-center py-4 text-base-content/60">No sales transactions recorded yet.</td></tr>{% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="card bg-base-100 shadow-xl">
+            <div class="card-body">
+                <p class="eyebrow text-error">Needs attention</p>
+                <h2 class="card-title text-xl text-error mb-2">Low stock alerts</h2>
+                <p class="text-xs text-base-content/70 mb-4">Items with 5 or fewer units remaining</p>
+                <div class="space-y-3">
+                    {% for item in low_stock_products %}
+                    <div class="flex items-center justify-between p-3 bg-base-200 rounded-lg"><div><p class="font-medium">{{ item.name }}</p><p class="text-xs text-base-content/70">Category: {{ item.category|default:"Uncategorized" }}</p></div><span class="badge badge-error text-white font-bold">{{ item.stock_quantity }} left</span></div>
+                    {% empty %}<div class="text-center py-6 text-base-content/60"><p class="text-sm">All inventory levels are healthy! 🎉</p></div>{% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Udhaar & WhatsApp Reminders Table -->
+    <div class="card bg-base-100 shadow-xl">
+        <div class="card-body">
+            <p class="eyebrow">Customer ledger</p>
+            <h2 class="card-title text-xl mb-2 flex items-center gap-2">Credit customers <span class="text-base-content/50 font-normal">/ Udhaar khata</span></h2>
+            <p class="text-xs text-base-content/70 mb-4">Send instant WhatsApp payment reminder messages to customers with pending balances.</p>
+            <div class="overflow-x-auto table-wrap"><table class="table table-zebra w-full"><thead><tr><th>Customer Name</th><th>Phone Number</th><th>Pending Balance</th><th>Action</th></tr></thead><tbody>
+                {% for customer in customers %}<tr><td class="font-medium">{{ customer.name }}</td><td>{{ customer.phone }}</td><td class="font-semibold text-warning">₹{{ customer.pending_balance|default:0.00|floatformat:2 }}</td><td><div class="flex flex-wrap gap-2"><button onclick="sendWhatsAppReminder('{{ customer.id }}', '{{ customer.name }}')" class="btn btn-xs btn-success text-white gap-1">💬 Send Udhaar Alert</button><button onclick="callUdhaarReminder('{{ customer.id }}', '{{ customer.name }}')" class="btn btn-xs btn-info text-white gap-1">📞 SMS + Call</button></div></td></tr>
+                {% empty %}<tr><td colspan="4" class="text-center py-4 text-base-content/60">No registered customers found.</td></tr>{% endfor %}
+            </tbody></table></div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal 1: WebRTC Camera Barcode POS Scanner -->
+<dialog id="barcode_scanner_modal" class="modal">
+    <div class="modal-box max-w-md text-center">
+        <div class="flex justify-between items-center border-b pb-3 mb-4">
+            <h3 class="font-bold text-lg text-primary flex items-center gap-2">
+                📷 WebRTC Barcode Scanner
+            </h3>
+            <button onclick="closeBarcodeScannerModal()" class="btn btn-sm btn-circle btn-ghost">✕</button>
+        </div>
+
+        <p class="text-xs text-base-content/70 mb-3">
+            Point laptop/mobile camera at product barcode (EAN / UPC / Code 128).
+        </p>
+
+        <!-- Live Camera Stream -->
+        <div class="relative bg-black rounded-xl overflow-hidden border-2 border-primary/30 shadow-inner">
+            <div id="interactive_reader" class="w-full min-h-[260px]"></div>
+        </div>
+
+        <!-- Visual Scan Feedback Badge -->
+        <div id="scan_result_badge" class="mt-4 hidden alert alert-success text-white py-2 text-sm font-semibold animate-pulse">
+            Scanned Barcode: <span id="scanned_barcode_val">--</span>
+        </div>
+
+        <div class="modal-action flex justify-between items-center mt-4">
+            <button onclick="closeBarcodeScannerModal()" class="btn btn-ghost btn-sm">Cancel</button>
+            <span class="text-xs text-base-content/50">html5-qrcode engine</span>
+        </div>
+    </div>
+</dialog>
+
+<!-- Modal 2: Paytm UPI Quick Checkout & Soundbox -->
+<dialog id="paytm_modal" class="modal">
+    <div class="modal-box max-w-md">
+        <div class="flex items-center justify-between border-b pb-3 mb-4">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded bg-[#002E6E] flex items-center justify-center text-white font-black text-xs p-1">Paytm</div>
+                <h3 class="font-bold text-lg text-[#002E6E]">Paytm Dynamic Payment</h3>
+            </div>
+            <button onclick="paytm_modal.close()" class="btn btn-sm btn-circle btn-ghost">✕</button>
+        </div>
+
+        <form id="paytm_form" method="POST" action="{% url 'dashboard' %}" class="space-y-4">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="add_sale">
+            
+            <div>
+                <label class="label"><span class="label-text font-semibold">Select Product *</span></label>
+                <select id="paytm_product_select" name="product_id" class="select select-bordered w-full" onchange="updatePaytmQR()" required>
+                    <option value="" disabled selected>Choose a product</option>
+                    {% for product in products %}
+                        <option value="{{ product.id }}" data-barcode="{{ product.barcode|default:'' }}" data-name="{{ product.name|lower }}">{{ product.name }} (Stock: {{ product.stock_quantity }}) - ₹{{ product.price }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label class="label"><span class="label-text font-semibold">Customer (Optional)</span></label>
+                <select name="customer_id" class="select select-bordered w-full">
+                    <option value="">Walk-in Customer</option>
+                    {% for customer in customers %}
+                        <option value="{{ customer.id }}">{{ customer.name }} ({{ customer.phone }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label class="label"><span class="label-text font-semibold">Quantity *</span></label>
+                <input id="paytm_quantity_input" type="number" name="quantity" min="1" value="1" class="input input-bordered w-full" oninput="updatePaytmQR()" required>
+            </div>
+
+            <!-- Dynamic QR Code Display -->
+            <div id="qr_container" class="hidden flex flex-col items-center justify-center p-4 bg-base-200 rounded-xl border border-dashed border-[#002E6E]">
+                <span class="text-xs font-bold text-[#002E6E] uppercase tracking-wider mb-2">Scan with Paytm</span>
+                <img id="qr_image" src="" alt="Paytm UPI QR" class="w-44 h-44 shadow-md bg-white p-2 rounded-lg" />
+                <div class="mt-2 text-center">
+                    <p class="text-xs text-base-content/70">Total Amount</p>
+                    <p id="qr_amount_text" class="text-2xl font-black text-[#002E6E]">₹0.00</p>
+                </div>
+            </div>
+
+            <div class="modal-action flex justify-between items-center">
+                <div class="flex items-center gap-2 text-xs bg-info/10 text-info px-3 py-2 rounded-lg font-medium">
+                    <svg class="w-4 h-4 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/></svg>
+                    <span>Paytm Soundbox Active</span>
+                </div>
+                <button type="button" onclick="confirmPaytmPayment()" class="btn btn-success text-white">Confirm Paytm payment</button>
+            </div>
+        </form>
+    </div>
+</dialog>
+
+<!-- Modal 3 & 4: Add Product and Add Customer -->
+<dialog id="product_modal" class="modal">
+    <div class="modal-box">
+        <h3 class="font-bold text-lg mb-4">Add New Product</h3>
+        <form method="POST" class="space-y-4">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="add_product">
+            <div>
+                <label class="label"><span class="label-text">Product Name *</span></label>
+                <input type="text" name="name" class="input input-bordered w-full" placeholder="e.g. Basmati Rice 5kg" required>
+            </div>
+            <div>
+                <label class="label"><span class="label-text">Category</span></label>
+                <input type="text" name="category" class="input input-bordered w-full" placeholder="e.g. Groceries">
+            </div>
+            <div>
+                <label class="label"><span class="label-text">Selling price (₹) *</span></label>
+                <input type="number" step="0.01" name="price" class="input input-bordered w-full" placeholder="250.00" required>
+            </div>
+            <div>
+                <label class="label"><span class="label-text">Cost price (₹)</span></label>
+                <input type="number" step="0.01" name="cost_price" class="input input-bordered w-full" placeholder="200.00">
+            </div>
+            <div>
+                <label class="label"><span class="label-text">Stock Quantity *</span></label>
+                <input type="number" name="stock_quantity" class="input input-bordered w-full" placeholder="10" required>
+            </div>
+            <div>
+                <label class="label"><span class="label-text">Reorder alert below</span></label>
+                <input type="number" name="reorder_level" min="0" value="5" class="input input-bordered w-full">
+            </div>
+            <div class="modal-action">
+                <button type="button" onclick="product_modal.close()" class="btn">Cancel</button>
+                <button type="submit" class="btn btn-secondary text-white">Save Product</button>
+            </div>
+        </form>
+    </div>
+</dialog>
+
+<dialog id="customer_modal" class="modal">
+    <div class="modal-box">
+        <h3 class="font-bold text-lg mb-4">Add New Customer</h3>
+        <form method="POST" class="space-y-4">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="add_customer">
+            <div>
+                <label class="label"><span class="label-text">Customer Name *</span></label>
+                <input type="text" name="name" class="input input-bordered w-full" placeholder="e.g. Rahul Sharma" required>
+            </div>
+            <div>
+                <label class="label"><span class="label-text">Phone Number *</span></label>
+                <input type="text" name="phone" class="input input-bordered w-full" placeholder="e.g. 9876543210" required>
+            </div>
+            <div class="modal-action">
+                <button type="button" onclick="customer_modal.close()" class="btn">Cancel</button>
+                <button type="submit" class="btn btn-accent text-white">Save Customer</button>
+            </div>
+        </form>
+    </div>
+</dialog>
+
+<!-- Floating AI Chat Trigger -->
+<button onclick="ai_modal.showModal()" class="fixed bottom-6 right-6 bg-primary text-white p-4 rounded-full shadow-2xl hover:scale-105 transition-transform z-50 flex items-center gap-2 font-bold">
+    🤖 Ask DukaanSaathi AI
+</button>
+
+<!-- AI Analytics Modal -->
+<dialog id="ai_modal" class="modal">
+    <div class="modal-box max-w-lg flex flex-col h-[500px]">
+        <div class="flex justify-between items-center border-b pb-3 mb-2">
+            <h3 class="font-bold text-lg text-primary flex items-center gap-2">
+                🤖 AI Analytics Copilot
+            </h3>
+            <button onclick="ai_modal.close()" class="btn btn-sm btn-circle btn-ghost">✕</button>
+        </div>
+
+        <!-- Conversation Output -->
+        <div id="chat_container" class="flex-1 overflow-y-auto space-y-3 p-2 bg-base-200 rounded-lg">
+            <div class="chat chat-start">
+                <div class="chat-bubble chat-bubble-primary text-sm">
+                    Namaste! Ask me anything about your revenue trends, product analytics, or sales history.
+                </div>
+            </div>
+        </div>
+
+        <!-- Prompt Input -->
+        <div class="mt-3 flex gap-2">
+            <input id="ai_input" type="text" placeholder="e.g. Which products generated the most revenue?" class="input input-bordered w-full text-sm" onkeydown="if(event.key==='Enter') sendAiQuery()" />
+            <button onclick="sendAiQuery()" class="btn btn-primary text-white">Ask</button>
+        </div>
+    </div>
+</dialog>
+
+<script>
+// CSRF Token Helper
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// 1. WhatsApp Udhaar Reminder Handler
+async function sendWhatsAppReminder(customerId, customerName) {
+    if (!confirm(`Send WhatsApp Udhaar balance reminder to ${customerName}?`)) return;
+
+    try {
+        const response = await fetch('/api/send-udhaar-reminder/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({ customer_id: customerId })
+        });
+        
+        const data = await response.json();
+
+        if (response.ok) {
+            alert(`✅ ${data.message}`);
+        } else {
+            alert(`❌ Failed: ${data.error}`);
+        }
+    } catch (err) {
+        alert('❌ Error sending request to server.');
+    }
+}
+
+async function callUdhaarReminder(customerId, customerName) {
+    if (!confirm(`Send a Paytm SMS and call ${customerName}?`)) return;
+
+    try {
+        const response = await fetch('/api/send-sms-udhaar-reminder/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({ customer_id: customerId })
+        });
+        const data = await response.json();
+        alert(response.ok ? `✅ ${data.message}` : `❌ Failed: ${data.error}`);
+    } catch (err) {
+        alert('❌ Error sending the SMS and starting the call.');
+    }
+}
+
+// 2. Paytm Soundbox & QR Logic
+function openPaytmCheckout() {
+    document.getElementById('paytm_modal').showModal();
+}
+
+function updatePaytmQR() {
+    const productId = document.getElementById('paytm_product_select').value;
+    const quantity = document.getElementById('paytm_quantity_input').value || 1;
+    const qrContainer = document.getElementById('qr_container');
+
+    if (!productId) return;
+
+    fetch(`{% url "generate_checkout_qr" %}?product_id=${encodeURIComponent(productId)}&quantity=${encodeURIComponent(quantity)}`, {
+        headers: { 'Accept': 'application/json' }
+    })
+        .then(async res => {
+            const contentType = res.headers.get('content-type') || '';
+            if (!contentType.includes('application/json')) {
+                throw new Error(`QR service returned an unexpected response (${res.status}).`);
+            }
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Could not generate the payment QR.');
+            return data;
+        })
+        .then(data => {
+            if (data.success) {
+                document.getElementById('qr_image').src = data.qr_code;
+                document.getElementById('qr_amount_text').innerText = `₹${data.total_amount}`;
+                qrContainer.classList.remove('hidden');
+            } else {
+                alert(data.error);
+                qrContainer.classList.add('hidden');
+            }
+        })
+        .catch(error => {
+            qrContainer.classList.add('hidden');
+            alert(error.message);
+        });
+}
+
+function speakPaytmSoundbox(amount) {
+    if ('speechSynthesis' in window) {
+        const text = `Paytm par ${amount} rupaye praapt hue`;
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'hi-IN';
+        utterance.rate = 0.9;
+        window.speechSynthesis.speak(utterance);
+    }
+}
+
+let paytmFallbackReady = false;
+
+async function confirmPaytmPayment() {
+    if (paytmFallbackReady) {
+        document.getElementById('paytm_form').submit();
+        return;
+    }
+    const product = document.getElementById('paytm_product_select');
+    const quantity = document.getElementById('paytm_quantity_input');
+    const customer = document.querySelector('#paytm_form select[name="customer_id"]');
+    if (!product.value || Number(quantity.value) < 1) {
+        alert('Please select a product and valid quantity first.');
+        return;
+    }
+
+    const button = document.querySelector('#paytm_form button[onclick="confirmPaytmPayment()"]');
+    button.disabled = true;
+    button.innerText = 'Connecting to Paytm...';
+    try {
+        const csrfToken = getCookie('csrftoken') || document.querySelector('#paytm_form [name="csrfmiddlewaretoken"]').value;
+        const body = new URLSearchParams({
+            product_id: product.value,
+            quantity: quantity.value,
+            customer_id: customer.value,
+        });
+        const response = await fetch('{% url "initiate_paytm_payment" %}', {
+            method: 'POST',
+            headers: { 'X-CSRFToken': csrfToken, 'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'application/json' },
+            body,
+        });
+        const contentType = response.headers.get('content-type') || '';
+        if (!contentType.includes('application/json')) {
+            throw new Error(`Paytm service returned an unexpected response (${response.status}). Please refresh and try again.`);
+        }
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Could not start Paytm payment.');
+        speakPaytmSoundbox(data.total_amount || data.amount);
+
+        if (data.mode === 'paytm_gateway') {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = `${data.gateway_url}?mid=${encodeURIComponent(data.mid)}&orderId=${encodeURIComponent(data.order_id)}`;
+            [['mid', data.mid], ['orderId', data.order_id], ['txnToken', data.txn_token]].forEach(([name, value]) => {
+                const input = document.createElement('input');
+                input.type = 'hidden'; input.name = name; input.value = value; form.appendChild(input);
+            });
+            document.body.appendChild(form);
+            form.submit();
+        } else {
+            document.getElementById('qr_image').src = data.qr_code;
+            document.getElementById('qr_amount_text').innerText = `₹${data.total_amount}`;
+            document.getElementById('qr_container').classList.remove('hidden');
+            paytmFallbackReady = true;
+            button.disabled = false;
+            button.innerText = 'Record QR payment (local mode)';
+            alert(data.message);
+        }
+    } catch (error) {
+        alert(error.message);
+        button.disabled = false;
+        button.innerText = 'Confirm Paytm payment';
+    }
+}
+
+// 3. WebRTC Barcode Scanner Logic
+let html5QrcodeScanner = null;
+
+function openBarcodeScannerModal() {
+    const modal = document.getElementById('barcode_scanner_modal');
+    modal.showModal();
+
+    document.getElementById('scan_result_badge').classList.add('hidden');
+
+    if (!html5QrcodeScanner) {
+        html5QrcodeScanner = new Html5Qrcode("interactive_reader");
+    }
+
+    const config = { fps: 10, qrbox: { width: 250, height: 150 }, aspectRatio: 1.0 };
+
+    html5QrcodeScanner.start(
+        { facingMode: "environment" }, 
+        config, 
+        onBarcodeScanSuccess, 
+        () => {}
+    ).catch(err => {
+        html5QrcodeScanner.start({ facingMode: "user" }, config, onBarcodeScanSuccess, () => {});
+    });
+}
+
+function onBarcodeScanSuccess(decodedText) {
+    playScanBeep();
+
+    const badge = document.getElementById('scan_result_badge');
+    document.getElementById('scanned_barcode_val').innerText = decodedText;
+    badge.classList.remove('hidden');
+
+    html5QrcodeScanner.pause(true);
+
+    selectProductByBarcode(decodedText);
+
+    setTimeout(() => {
+        closeBarcodeScannerModal();
+        openPaytmCheckout();
+    }, 800);
+}
+
+function closeBarcodeScannerModal() {
+    if (html5QrcodeScanner && html5QrcodeScanner.isScanning) {
+        html5QrcodeScanner.stop().then(() => {
+            document.getElementById('barcode_scanner_modal').close();
+        }).catch(() => {
+            document.getElementById('barcode_scanner_modal').close();
+        });
+    } else {
+        document.getElementById('barcode_scanner_modal').close();
+    }
+}
+
+function playScanBeep() {
+    try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = "sine";
+        osc.frequency.value = 1800;
+        gain.gain.value = 0.15;
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.12);
+    } catch(e) {}
+}
+
+function selectProductByBarcode(code) {
+    const select = document.getElementById('paytm_product_select');
+    const searchCode = code.toLowerCase();
+
+    for (let option of select.options) {
+        const optionBarcode = option.getAttribute('data-barcode');
+        const optionName = option.getAttribute('data-name');
+
+        if ((optionBarcode && optionBarcode === searchCode) || (optionName && optionName.includes(searchCode))) {
+            select.value = option.value;
+            updatePaytmQR();
+            break;
+        }
+    }
+}
+
+// 4. Gemini AI Agent Handler
+async function sendAiQuery() {
+    const input = document.getElementById('ai_input');
+    const query = input.value.trim();
+    if (!query) return;
+
+    const chatContainer = document.getElementById('chat_container');
+
+    chatContainer.innerHTML += `
+        <div class="chat chat-end">
+            <div class="chat-bubble chat-bubble-neutral text-sm">${query}</div>
+        </div>`;
+    input.value = '';
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+
+    const loadingId = 'loading_' + Date.now();
+    chatContainer.innerHTML += `
+        <div id="${loadingId}" class="chat chat-start">
+            <div class="chat-bubble chat-bubble-primary text-sm animate-pulse">
+                Querying database via Gemini... ⚡
+            </div>
+        </div>`;
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+
+    try {
+        const res = await fetch('/api/ai-agent/', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({ prompt: query })
+        });
+        const data = await res.json();
+        
+        document.getElementById(loadingId).remove();
+
+        const aiResponse = data.response || data.error || "Unable to fetch requested data.";
+        chatContainer.innerHTML += `
+            <div class="chat chat-start">
+                <div class="chat-bubble chat-bubble-primary text-sm">${aiResponse.replace(/\n/g, '<br>')}</div>
+            </div>`;
+    } catch (e) {
+        document.getElementById(loadingId).remove();
+        chatContainer.innerHTML += `
+            <div class="chat chat-start">
+                <div class="chat-bubble chat-bubble-error text-sm">Error communicating with server.</div>
+            </div>`;
+    }
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+}
+</script>
+{% endblock %}

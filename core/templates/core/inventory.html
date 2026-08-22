@@ -1,0 +1,116 @@
+{% extends 'base.html' %}
+
+{% block title %}Inventory - DukaanSaathi{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+            <p class="eyebrow">Stock room</p>
+            <h1 class="page-title">Inventory catalog</h1>
+            <p class="page-subtitle">Keep every shelf count accurate and every fast mover in view.</p>
+        </div>
+        
+        <!-- Search Bar -->
+        <form method="GET" class="flex gap-2">
+            <input type="text" name="search" value="{{ search_query }}" placeholder="Search products or category..." class="input input-bordered w-full md:w-64" />
+            <button type="submit" class="btn btn-primary text-white">Find products</button>
+            {% if search_query %}
+                <a href="{% url 'inventory_list' %}" class="btn btn-ghost">Reset</a>
+            {% endif %}
+        </form>
+    </div>
+
+    <!-- Inventory Table -->
+    <div class="card bg-base-100 shadow-xl">
+        <div class="card-body">
+            <div class="flex items-center justify-between mb-3">
+                <h2 class="card-title text-xl">All products</h2>
+                <span class="badge badge-ghost">{{ products|length }} shown</span>
+            </div>
+            <div class="overflow-x-auto table-wrap">
+                <table class="table table-zebra w-full">
+                    <thead>
+                        <tr data-product-id="{{ product.id }}">
+                            <th>ID</th>
+                            <th>Product Name</th>
+                            <th>Category</th>
+                            <th>Price</th>
+                            <th>Current Stock</th>
+                            <th>Status</th>
+                            <th>Quick Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for product in products %}
+                        <tr>
+                            <td>{{ product.id }}</td>
+                            <td class="font-bold">{{ product.name }}</td>
+                            <td><span class="badge badge-ghost">{{ product.category|default:"General" }}</span></td>
+                            <td class="font-semibold text-primary">₹{{ product.price }}</td>
+                            <td class="font-bold" data-stock>{{ product.stock_quantity }}</td>
+                            <td data-status>
+                                {% if product.stock_quantity == 0 %}
+                                    <span class="badge badge-error text-white font-semibold">Out of Stock</span>
+                                {% elif product.stock_quantity <= 5 %}
+                                    <span class="badge badge-warning text-white font-semibold">Low Stock</span>
+                                {% else %}
+                                    <span class="badge badge-success text-white font-semibold">In Stock</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <!-- Quick Update Form -->
+                                <form method="POST" class="flex items-center gap-2">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="update_stock">
+                                    <input type="hidden" name="product_id" value="{{ product.id }}">
+                                    <input type="number" name="stock_quantity" value="{{ product.stock_quantity }}" min="0" class="input input-bordered input-xs w-20">
+                                    <button type="submit" class="btn btn-xs btn-outline btn-primary">Update</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center py-6 text-base-content/60">No products found matching your search.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    const inventoryRows = new Map(
+        [...document.querySelectorAll('[data-product-id]')].map(row => [row.dataset.productId, row])
+    );
+
+    function renderStockStatus(row, product) {
+        row.querySelector('[data-stock]').textContent = product.stock_quantity;
+        const status = row.querySelector('[data-status]');
+        const states = {
+            out_of_stock: ['Out of Stock', 'badge-error'],
+            low_stock: ['Low Stock', 'badge-warning'],
+            in_stock: ['In Stock', 'badge-success']
+        };
+        const [label, color] = states[product.status];
+        status.innerHTML = `<span class="badge ${color} text-white font-semibold">${label}</span>`;
+    }
+
+    async function refreshInventory() {
+        try {
+            const response = await fetch('{% url "inventory_snapshot" %}', { headers: { 'Accept': 'application/json' } });
+            if (!response.ok) return;
+            const data = await response.json();
+            data.products.forEach(product => {
+                const row = inventoryRows.get(String(product.id));
+                if (row) renderStockStatus(row, product);
+            });
+        } catch (error) {
+            // A temporary network failure should not interrupt stock editing.
+        }
+    }
+
+    window.setInterval(refreshInventory, 10000);
+</script>
+{% endblock %}
