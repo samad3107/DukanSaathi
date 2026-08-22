@@ -34,6 +34,9 @@ ALLOWED_HOSTS = ["127.0.0.1", "localhost", "testserver", "dukan-saathi.vercel.ap
 public_host = urlparse(os.getenv("PUBLIC_BASE_URL", "")).hostname
 if public_host:
     ALLOWED_HOSTS.append(public_host)
+vercel_host = os.getenv("VERCEL_URL", "").split(":", 1)[0].strip()
+if vercel_host and vercel_host not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append(vercel_host)
 ALLOWED_HOSTS.append(".ngrok-free.dev")
 
 CSRF_TRUSTED_ORIGINS = ["https://dukan-saathi.vercel.app"]
