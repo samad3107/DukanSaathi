@@ -30,11 +30,15 @@ SECRET_KEY = 'django-insecure-u@6%qy2jvt914tpf!jea&a_z(lpn@$ki9fe*%_3he2qzjd(3_9
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["127.0.0.1", "localhost", "testserver"]
+ALLOWED_HOSTS = ["127.0.0.1", "localhost", "testserver", "dukan-saathi.vercel.app"]
 public_host = urlparse(os.getenv("PUBLIC_BASE_URL", "")).hostname
 if public_host:
     ALLOWED_HOSTS.append(public_host)
 ALLOWED_HOSTS.append(".ngrok-free.dev")
+
+CSRF_TRUSTED_ORIGINS = ["https://dukan-saathi.vercel.app"]
+if os.getenv("PUBLIC_BASE_URL"):
+    CSRF_TRUSTED_ORIGINS.append(os.getenv("PUBLIC_BASE_URL").rstrip("/"))
 
 
 # Application definition
